@@ -1,0 +1,37 @@
+name: Daily NBA Fantasy Update
+on:
+  schedule:
+    # Run at 8:00 AM UTC every day (approx 4:00 PM Taiwan Time)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allows manual trigger
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Generate Report
+        run: |
+          python generate_report.py
+      - name: Prepare for Deployment
+        run: |
+          # Rename the output to index.html so it serves as the homepage
+          mv fantasy_nba_report_v2.html index.html
+          
+          # Configure git
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+          # Commit and Push
+          git add index.html
+          git commit -m "Daily Update: $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push origin HEAD:main

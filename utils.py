@@ -7,7 +7,7 @@ import time
 # Constants
 CACHE_DURATION = 3600 # 1 hour
 
-def get_schedule(start_date, end_date):
+def get_schedule(start_date, end_date, season='2025-26'):
     """
     Fetches schedule between start_date and end_date.
     Returns a DataFrame with columns: [TEAM_ID, TEAM_ABBREVIATION, GAME_DATE, MATCHUP]
@@ -19,6 +19,7 @@ def get_schedule(start_date, end_date):
         league_id_nullable='00',
         date_from_nullable=start_str,
         date_to_nullable=end_str,
+        season_nullable=season, # Explicitly request the season
         season_type_nullable='Regular Season'
     )
     games = game_finder.get_data_frames()[0]
@@ -35,10 +36,10 @@ def get_schedule(start_date, end_date):
     
     return games
 
-def get_player_stats_multi_period():
+def get_player_stats_multi_period(season='2025-26'):
     """
     Fetches stats for:
-    1. Season (2024-25)
+    1. Season (e.g. 2025-26)
     2. Last 7 Days
     3. Last 14 Days
     
@@ -49,12 +50,9 @@ def get_player_stats_multi_period():
     def fetch_stats(date_from=None):
         date_from_str = date_from.strftime('%m/%d/%Y') if date_from else ''
         
-        # If we are in "Time Travel" mode (2025 system time but 2024 season),
-        # we might need to adjust the date_from query.
-        # But for simplicity, let's try standard query first.
-        
         stats = leaguedashplayerstats.LeagueDashPlayerStats(
             per_mode_detailed='PerGame',
+            season=season, # Explicitly request the season
             season_type_all_star='Regular Season',
             date_from_nullable=date_from_str
         )
@@ -91,15 +89,7 @@ def get_player_stats_multi_period():
     print(f"  Fetching L14 Stats (from {d14})...")
     df_l14 = fetch_stats(d14)
     
-    # Fallback: If L7/L14 are empty (because of 2025 date), try 2024 dates
-    if df_l7.empty and not df_season.empty:
-        print("  ⚠️ L7 empty. Trying 2024 dates for L7/L14...")
-        today_2024 = today.replace(year=today.year - 1)
-        d7_2024 = today_2024 - timedelta(days=7)
-        d14_2024 = today_2024 - timedelta(days=14)
-        
-        df_l7 = fetch_stats(d7_2024)
-        df_l14 = fetch_stats(d14_2024)
+    return {
 
     return {
         'Season': df_season,
@@ -107,7 +97,7 @@ def get_player_stats_multi_period():
         'L14': df_l14
     }
 
-def get_team_defensive_ratings():
+def get_team_defensive_ratings(season='2025-26'):
     """
     Fetches team defensive ratings.
     Returns a dict: {TeamAbbr: {'Rank': int, 'DefRtg': float}}
@@ -115,6 +105,7 @@ def get_team_defensive_ratings():
     # Use 'Advanced' to get DEF_RATING
     stats_adv = leaguedashteamstats.LeagueDashTeamStats(
         per_mode_detailed='PerGame',
+        season=season, # Explicitly request the season
         season_type_all_star='Regular Season',
         measure_type_detailed_defense='Advanced'
     )

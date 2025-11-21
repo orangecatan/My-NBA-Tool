@@ -9,7 +9,17 @@ def generate_html_report():
     print("Initializing Fantasy NBA Report Generator V2...")
     
     # 1. Define Date Ranges
+    # 1. Define Date Ranges
     today = datetime.now().date()
+    
+    # FORCE 2025: If server is in 2024 (GitHub), pretend it's 2025
+    if today.year == 2024:
+        print("⚠️ Server is in 2024. Engaging Time Travel to 2025...")
+        try:
+            today = today.replace(year=2025)
+        except ValueError: # Handle Feb 29
+            today = today + timedelta(days=365)
+            
     days_until_sunday = (6 - today.weekday()) % 7
     w1_end = today + timedelta(days=days_until_sunday)
     w1_start = today
@@ -17,28 +27,30 @@ def generate_html_report():
     # Calculate end date for 4 weeks
     final_end = w1_end + timedelta(days=21) # 3 more weeks
     
+    # Determine Season String (e.g., "2025-26")
+    # If month is >= 10 (Oct), season is Year-(Year+1)
+    # If month is <= 7 (July), season is (Year-1)-Year
+    curr_year = today.year
+    if today.month >= 10:
+        season_str = f"{curr_year}-{str(curr_year+1)[-2:]}"
+    else:
+        season_str = f"{curr_year-1}-{str(curr_year)[-2:]}"
+        
     print(f"Report Range: {w1_start} to {final_end}")
+    print(f"Detected Season: {season_str}")
 
     # 2. Fetch Data
     print("Fetching Schedule...")
-    full_schedule = utils.get_schedule(w1_start, final_end)
+    full_schedule = utils.get_schedule(w1_start, final_end, season=season_str)
     
-    # Fallback for Date Mismatch
     if full_schedule.empty:
-        print("⚠️ No games found. Trying previous year (Time Travel Mode)...")
-        w1_start_fallback = w1_start.replace(year=w1_start.year - 1)
-        final_end_fallback = final_end.replace(year=final_end.year - 1)
-        full_schedule = utils.get_schedule(w1_start_fallback, final_end_fallback)
-        
-        if not full_schedule.empty:
-            print(f"✅ Found games in {w1_start_fallback.year}! Adjusting display dates...")
-            full_schedule['GAME_DATE'] = full_schedule['GAME_DATE'].apply(lambda d: d.replace(year=d.year + 1))
+        print(f"⚠️ Warning: No games found for {season_str} in this date range.")
 
     print("Fetching Player Stats (Multi-Period)...")
-    stats_dict = utils.get_player_stats_multi_period()
+    stats_dict = utils.get_player_stats_multi_period(season=season_str)
     
     print("Fetching Defensive Ratings...")
-    def_ratings = utils.get_team_defensive_ratings()
+    def_ratings = utils.get_team_defensive_ratings(season=season_str)
 
     # 3. Process Data Helper
     def process_week_grid(start_date, end_date, schedule_df, stats_dict, def_ratings):

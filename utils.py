@@ -90,52 +90,12 @@ def get_player_stats_multi_period(season='2025-26'):
     df_l14 = fetch_stats(d14)
     
     return {
-
-    return {
         'Season': df_season,
         'L7': df_l7,
         'L14': df_l14
     }
 
 def get_team_defensive_ratings(season='2025-26'):
-    """
-    Fetches team defensive ratings.
-    Returns a dict: {TeamAbbr: {'Rank': int, 'DefRtg': float}}
-    """
-    # Use 'Advanced' to get DEF_RATING
-    stats_adv = leaguedashteamstats.LeagueDashTeamStats(
-        per_mode_detailed='PerGame',
-        season=season, # Explicitly request the season
-        season_type_all_star='Regular Season',
-        measure_type_detailed_defense='Advanced'
-    )
-    df = stats_adv.get_data_frames()[0]
-    
-    # Create ID -> Abbr map
-    nba_teams = teams.get_teams()
-    id_to_abbr = {team['id']: team['abbreviation'] for team in nba_teams}
-    
-    # Sort by DEF_RATING
-    if 'DEF_RATING' in df.columns:
-        df = df.sort_values('DEF_RATING', ascending=True) # 1=Best
-    else:
-        # Fallback: Sort by W_PCT (Better teams are usually harder)
-        df = df.sort_values('W_PCT', ascending=False)
-        
-    df['DEF_RANK'] = range(1, len(df) + 1)
-    
-    # Create map: ABBR -> Rank
-    def_map = {}
-    for _, row in df.iterrows():
-        tid = row['TEAM_ID']
-        abbr = id_to_abbr.get(tid, 'UNK')
-        
-        def_map[abbr] = {
-            'Rank': row['DEF_RANK'],
-            'DefRtg': row.get('DEF_RATING', 0.0)
-        }
-        
-    return def_map
 
 def get_color_for_rank(rank):
     """

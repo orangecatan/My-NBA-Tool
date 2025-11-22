@@ -274,6 +274,16 @@ def generate_html_report():
         current_start = current_end + timedelta(days=1)
         current_end = current_start + timedelta(days=6)
 
+    # Generate HTML Components outside f-string to avoid backslash errors in Python < 3.12
+    tabs_html = ""
+    for i, w in enumerate(weeks_data):
+        is_active = 'id="defaultOpen"' if i == 0 else ''
+        tabs_html += f'<button class="tablinks" onclick="openWeek(event, \'{w["id"]}\')" {is_active}>{w["label"]}</button>\n'
+
+    content_html = ""
+    for w in weeks_data:
+        content_html += f'<div id="{w["id"]}" class="tabcontent">{w["content"]}</div>\n'
+
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -394,10 +404,10 @@ def generate_html_report():
             </div>
 
             <div class="tab">
-                {''.join([f'<button class="tablinks" onclick="openWeek(event, \'{w["id"]}\')" id="{ "defaultOpen" if i==0 else "" }">{w["label"]}</button>' for i, w in enumerate(weeks_data)])}
+                {tabs_html}
             </div>
 
-            {''.join([f'<div id="{w["id"]}" class="tabcontent">{w["content"]}</div>' for w in weeks_data])}
+            {content_html}
         </div>
     </body>
     </html>

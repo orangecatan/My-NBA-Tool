@@ -7,6 +7,11 @@ from requests.exceptions import ReadTimeout, ConnectionError, RequestException
 
 # Constants
 CACHE_DURATION = 3600 # 1 hour
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://www.nba.com/'
+}
 
 def retry_api_call(func, retries=5, delay=5):
     """
@@ -40,7 +45,8 @@ def get_schedule(start_date, end_date, season='2025-26'):
             date_to_nullable=end_str,
             season_nullable=season, # Explicitly request the season
             season_type_nullable='Regular Season',
-            timeout=60 # Increase timeout if supported, otherwise ignored
+            timeout=120, # Increase timeout
+            headers=HEADERS
         )
 
     try:
@@ -81,7 +87,8 @@ def get_player_stats_multi_period(season='2025-26'):
                 season=season, # Explicitly request the season
                 season_type_all_star='Regular Season',
                 date_from_nullable=date_from_str,
-                timeout=60
+                timeout=120,
+                headers=HEADERS
             )
             
         try:
@@ -139,7 +146,8 @@ def get_team_defensive_ratings(season='2025-26'):
             season=season, # Explicitly request the season
             season_type_all_star='Regular Season',
             measure_type_detailed_defense='Advanced',
-            timeout=60
+            timeout=120,
+            headers=HEADERS
         )
         
     try:

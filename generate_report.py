@@ -64,8 +64,11 @@ def generate_html_report():
         day_cols = [d.strftime('%a (%m/%d)') for d in days]
         
         # Filter schedule
-        mask = (schedule_df['GAME_DATE'] >= start_date) & (schedule_df['GAME_DATE'] <= end_date)
-        week_games = schedule_df.loc[mask].copy()
+        if schedule_df.empty:
+            week_games = pd.DataFrame(columns=['TEAM_ID', 'TEAM_ABBREVIATION', 'GAME_DATE', 'MATCHUP'])
+        else:
+            mask = (schedule_df['GAME_DATE'] >= start_date) & (schedule_df['GAME_DATE'] <= end_date)
+            week_games = schedule_df.loc[mask].copy()
         
         # Helper to get badge
         def get_badge_html(opp_abbr, is_home):

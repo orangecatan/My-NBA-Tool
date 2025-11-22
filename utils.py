@@ -132,7 +132,6 @@ def get_team_defensive_ratings(season='2025-26'):
     Fetches team defensive ratings.
     Returns a dict: {TeamAbbr: {'Rank': int, 'DefRtg': float}}
     """
-    """
     # Use 'Advanced' to get DEF_RATING
     def fetch_def():
         return leaguedashteamstats.LeagueDashTeamStats(
@@ -174,6 +173,8 @@ def get_team_defensive_ratings(season='2025-26'):
         }
         
     return def_map
+
+def get_color_for_rank(rank):
     """
     Returns a hex color based on rank (1-30).
     Rank 1 (Best Def) -> Red (Bad for Fantasy)

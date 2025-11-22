@@ -3,9 +3,27 @@ from datetime import datetime, timedelta
 from nba_api.stats.endpoints import leaguegamefinder, leaguedashplayerstats, leaguedashteamstats
 from nba_api.stats.static import teams
 import time
+from requests.exceptions import ReadTimeout, ConnectionError, RequestException
 
 # Constants
 CACHE_DURATION = 3600 # 1 hour
+
+def retry_api_call(func, retries=5, delay=5):
+    """
+    Wraps an API call with retry logic.
+    """
+    for i in range(retries):
+        try:
+            return func()
+        except (ReadTimeout, ConnectionError, RequestException) as e:
+            print(f"  ⚠️ API Error (Attempt {i+1}/{retries}): {e}")
+            if i < retries - 1:
+                sleep_time = delay * (i + 1)
+                print(f"  ⏳ Retrying in {sleep_time}s...")
+                time.sleep(sleep_time)
+            else:
+                print("  ❌ Max retries reached.")
+                raise e
 
 def get_schedule(start_date, end_date, season='2025-26'):
     """
@@ -15,14 +33,21 @@ def get_schedule(start_date, end_date, season='2025-26'):
     start_str = start_date.strftime('%m/%d/%Y')
     end_str = end_date.strftime('%m/%d/%Y')
     
-    game_finder = leaguegamefinder.LeagueGameFinder(
-        league_id_nullable='00',
-        date_from_nullable=start_str,
-        date_to_nullable=end_str,
-        season_nullable=season, # Explicitly request the season
-        season_type_nullable='Regular Season'
-    )
-    games = game_finder.get_data_frames()[0]
+    def fetch_schedule():
+        return leaguegamefinder.LeagueGameFinder(
+            league_id_nullable='00',
+            date_from_nullable=start_str,
+            date_to_nullable=end_str,
+            season_nullable=season, # Explicitly request the season
+            season_type_nullable='Regular Season',
+            timeout=60 # Increase timeout if supported, otherwise ignored
+        )
+
+    try:
+        game_finder = retry_api_call(fetch_schedule)
+        games = game_finder.get_data_frames()[0]
+    except Exception:
+        return pd.DataFrame()
     
     if games.empty:
         return pd.DataFrame()
@@ -50,13 +75,20 @@ def get_player_stats_multi_period(season='2025-26'):
     def fetch_stats(date_from=None):
         date_from_str = date_from.strftime('%m/%d/%Y') if date_from else ''
         
-        stats = leaguedashplayerstats.LeagueDashPlayerStats(
-            per_mode_detailed='PerGame',
-            season=season, # Explicitly request the season
-            season_type_all_star='Regular Season',
-            date_from_nullable=date_from_str
-        )
-        df = stats.get_data_frames()[0]
+        def fetch():
+            return leaguedashplayerstats.LeagueDashPlayerStats(
+                per_mode_detailed='PerGame',
+                season=season, # Explicitly request the season
+                season_type_all_star='Regular Season',
+                date_from_nullable=date_from_str,
+                timeout=60
+            )
+            
+        try:
+            stats = retry_api_call(fetch)
+            df = stats.get_data_frames()[0]
+        except Exception:
+            return pd.DataFrame() # Return empty on failure
         
         # Select key columns
         cols = [
@@ -100,14 +132,22 @@ def get_team_defensive_ratings(season='2025-26'):
     Fetches team defensive ratings.
     Returns a dict: {TeamAbbr: {'Rank': int, 'DefRtg': float}}
     """
+    """
     # Use 'Advanced' to get DEF_RATING
-    stats_adv = leaguedashteamstats.LeagueDashTeamStats(
-        per_mode_detailed='PerGame',
-        season=season, # Explicitly request the season
-        season_type_all_star='Regular Season',
-        measure_type_detailed_defense='Advanced'
-    )
-    df = stats_adv.get_data_frames()[0]
+    def fetch_def():
+        return leaguedashteamstats.LeagueDashTeamStats(
+            per_mode_detailed='PerGame',
+            season=season, # Explicitly request the season
+            season_type_all_star='Regular Season',
+            measure_type_detailed_defense='Advanced',
+            timeout=60
+        )
+        
+    try:
+        stats_adv = retry_api_call(fetch_def)
+        df = stats_adv.get_data_frames()[0]
+    except Exception:
+        return {} # Return empty dict on failure
     
     # Create ID -> Abbr map
     nba_teams = teams.get_teams()
